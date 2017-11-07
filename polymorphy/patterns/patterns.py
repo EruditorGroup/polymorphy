@@ -1,5 +1,5 @@
-from .seq import Seq
-from .constants import ANY, ABSTRACT_GRAMMEMES
+from ..seq import Seq
+from ..constants import ANY, ABSTRACT_GRAMMEMES
 
 
 class PatternAbstract:

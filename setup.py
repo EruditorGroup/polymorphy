@@ -7,8 +7,8 @@ setup(name='polymorphy',
       author='Elia Schelokov',
       author_email='thaumant@gmail.com',
       license='MIT',
-      packages=['polymorphy'],
-      zip_safe=False
+      packages=['polymorphy', 'polymorphy.constants', 'polymorphy.patterns'],
+      zip_safe=False,
       install_requires=[
           'pymorphy2',
       ],
