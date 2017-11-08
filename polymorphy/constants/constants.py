@@ -1,20 +1,39 @@
+ANY  = 'ANY'  # любая граммема
+
+
 POS  = 'POS'  # часть речи
 # ----------
-NOUN = 'NOUN' # существительное
-ADJF = 'ADJF' # прилагательное
-INFN = 'INFN' # глагол-инфинитив
-VERB = 'VERB' # глагол в личной форме
+NOUN = 'NOUN' # имя существительное
+ADJF = 'ADJF' # имя прилагательное (полное)
+ADJS = 'ADJS' # имя прилагательное (краткое)
+COMP = 'COMP' # компаратив
+VERB = 'VERB' # глагол (личная форма)
+INFN = 'INFN' # глагол (инфинитив)
+PRTF = 'PRTF' # причастие (полное)
+PRTS = 'PRTS' # причастие (краткое)
+GRND = 'GRND' # деепричастие
+NUMR = 'NUMR' # числительное
+ADVB = 'ADVB' # наречие
+NPRO = 'NPRO' # местоимение-существительное
+PRED = 'PRED' # предикатив
+PREP = 'PREP' # предлог
+CONJ = 'CONJ' # союз
+PRCL = 'PRCL' # частица
+INTJ = 'INTJ' # междометие
+
 
 NMbr = 'NMbr' # число
 # ----------
 sing = 'sing' # единственное
 plur = 'plur' # множественное
 
+
 GNdr = 'GNdr' # пол
 # ----------
 masc = 'masc' # мужской
 femn = 'femn' # женский
 neut = 'neut' # средний
+
 
 CAse = 'CAse' # падеж
 # ----------
@@ -26,7 +45,6 @@ ablt = 'ablt' # творительный
 loct = 'loct' # предложный
 voct = 'voct' # звательный
 
-ANY  = 'ANY'  # любая граммема
 
 ABSTRACT_GRAMMEMES = {
     POS:  [NOUN, ADJF, INFN, VERB],
