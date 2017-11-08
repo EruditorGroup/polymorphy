@@ -1,7 +1,7 @@
 from unittest import main, TestCase, skip
 from polymorphy import Seq
 from polymorphy.constants import ANY, CAse, GNdr, NOUN, ADJF, INFN, VERB, nomn, gent, sing, plur, femn
-from polymorphy.patterns import PatternUnit, PatternAny, PatternAll, PatternRepeat, PatternSeq, PatternSame
+from polymorphy.patterns import PatternUnit, PatternWord, PatternLexem, PatternAny, PatternAll, PatternRepeat, PatternSeq, PatternSame
 
 
 class TestPatternUnit(TestCase):
@@ -23,6 +23,35 @@ class TestPatternUnit(TestCase):
         found, remains = pattern.match(self.seq)
         self.assertEqual(found.text, 'бежать')
         self.assertEqual(remains.text, 'одеяло наверное')
+
+
+class TestPatternWord(TestCase):
+    def test_match(self):
+        pattern = PatternWord('столы')
+        seq = Seq('столы большие')
+        found, remains = pattern.match(seq)
+        self.assertEqual(found.text, 'столы')
+        self.assertEqual(remains.text, 'большие')
+        self.assertEqual(found[0], seq[0])
+
+    def test_mismatch(self):
+        pattern = PatternWord('стол')
+        seq = Seq('столы большие')
+        self.assertEqual(pattern.match(seq), None)
+
+
+class TestPatternLexem(TestCase):
+    def test_match(self):
+        pattern = PatternLexem('стол')
+        seq = Seq('столы большие')
+        found, remains = pattern.match(seq)
+        self.assertEqual(found.text, 'столы')
+        self.assertEqual(remains.text, 'большие')
+
+    def test_mismatch(self):
+        pattern = PatternLexem('стул')
+        seq = Seq('столы большие')
+        self.assertEqual(pattern.match(seq), None)
 
 
 class TestPatternAny(TestCase):

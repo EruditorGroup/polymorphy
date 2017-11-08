@@ -31,3 +31,13 @@ class Word:
         variants = [variant for variant in self.variants if grammeme in variant.tag.grammemes]
         if not len(variants): return None
         return Word(self.text, variants)
+
+    # Возвращает копию слова с подмножеством вариантов, имеющих указанную нормальную форму.
+    # Возвращает None, если вариантов нет.
+    def constrain_normal_form(self, normal_form):
+        variants = []
+        for variant in self.variants:
+            if variant.normal_form == normal_form:
+                variants.append(variant)
+        if not len(variants): return None
+        return Word(self.text, variants)

@@ -18,6 +18,13 @@ class TestWord(TestCase):
         self.assertTrue(any(accs in v.tag.grammemes for v in word.variants))
         self.assertFalse(any(accs in v.tag.grammemes for v in constrained.variants))
 
+    def test_constrain_nf(self):
+        word = Word('лалала')
+        constrained = word.constrain_normal_form('лалал')
+        self.assertTrue(len(constrained.variants) < len(word.variants))
+        self.assertTrue(all(v.normal_form == 'лалал' for v in constrained.variants))
+        self.assertTrue(any(v.normal_form != 'лалал' for v in word.variants))
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -24,6 +24,31 @@ class PatternUnit(PatternAbstract):
         return (found, seq[1:]) if found else None
 
 
+class PatternWord(PatternAbstract):
+    min = 1
+    max = 1
+    def __init__(self, word):
+        self.word = word
+
+    def match(self, seq):
+        if type(seq) == str: seq = Seq(seq)
+        if not len(seq): return None
+        return (seq[:1], seq[1:]) if seq[0].text == self.word else None
+
+
+class PatternLexem(PatternAbstract):
+    min = 1
+    max = 1
+    def __init__(self, normal_form):
+        self.normal_form = normal_form
+
+    def match(self, seq):
+        if type(seq) == str: seq = Seq(seq)
+        if not len(seq): return None
+        word = seq.words[0].constrain_normal_form(self.normal_form)
+        return (Seq.from_words([word]), seq[1:]) if word else None
+
+
 class PatternSeq(PatternAbstract):
     def __init__(self, *parts):
         self.parts = [(p if isinstance(p, PatternAbstract) else PatternUnit(p)) for p in parts]
