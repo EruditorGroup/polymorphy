@@ -7,13 +7,15 @@ class Word:
     __morph = pymorphy2.MorphAnalyzer()
     __variants = None
 
-    def __init__(self, text, variants = None):
-        self.text = text
-        if variants: self.__variants = variants
+    def __init__(self, text, threshold = 0, variants = None):
+        self.text      = text
+        self.threshold = threshold
+        if variants: self.__variants = [v for v in variants if v.score > threshold]
 
     @property
     def variants(self):
-        if self.__variants is None: self.__variants = self.__morph.parse(self.text)
+        if self.__variants is None:
+            self.__variants = [v for v in self.__morph.parse(self.text) if v.score > self.threshold]
         return self.__variants
 
     def __repr__(self):
@@ -30,7 +32,7 @@ class Word:
         if grammeme == ANY: return self
         variants = [variant for variant in self.variants if grammeme in variant.tag.grammemes]
         if not len(variants): return None
-        return Word(self.text, variants)
+        return Word(self.text, variants = variants)
 
     # Возвращает копию слова с подмножеством вариантов, имеющих указанную нормальную форму.
     # Возвращает None, если вариантов нет.
@@ -40,4 +42,4 @@ class Word:
             if variant.normal_form == normal_form:
                 variants.append(variant)
         if not len(variants): return None
-        return Word(self.text, variants)
+        return Word(self.text, variants = variants)

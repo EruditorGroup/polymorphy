@@ -8,8 +8,9 @@ class Seq:
     __spaces_pattern = re.compile(r'[\s]+')
     __text = None
 
-    def __init__(self, text = ''):
-        self.words = [Word(w) for w in Seq.__spaces_pattern.split(text) if len(w)]
+    def __init__(self, text = '', threshold = 0):
+        self.threshold = threshold
+        self.words     = [Word(w, threshold = threshold) for w in Seq.__spaces_pattern.split(text) if len(w)]
 
     def __eq__(self, other):
         if not isinstance(other, Seq): return False

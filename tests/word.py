@@ -1,6 +1,6 @@
 from unittest import main, TestCase, skip
 from polymorphy import Word
-from polymorphy.constants import nomn, accs
+from polymorphy.constants import PREP, nomn, accs
 
 
 class TestWord(TestCase):
@@ -9,6 +9,12 @@ class TestWord(TestCase):
         self.assertEqual(len(word.variants), 2)
         self.assertEqual(word.__repr__(), 'зеленый×2')
         self.assertEqual(word.variants[0].normal_form, 'зелёный')
+
+    def test_threshold(self):
+        word1 = Word('в')
+        word2 = Word('в', 0.01)
+        self.assertFalse(all(PREP in v.tag.grammemes for v in word1.variants))
+        self.assertTrue(all(PREP in v.tag.grammemes for v in word2.variants))
 
     def test_constrain(self):
         word = Word('стол')
