@@ -1,5 +1,5 @@
 import pymorphy2
-from .constants import ANY
+from .constants import ANY, ABSTRACT_GRAMMEMES, POS
 
 
 # Слово представляет строку + набор вариантов его интерпретации с помощью pymorphy2.MorphAnalyzer.
@@ -43,3 +43,23 @@ class Word:
                 variants.append(variant)
         if not len(variants): return None
         return Word(self.text, variants = variants)
+
+    # Склоняет слово по заданным граммемам
+    # По умолчанию фиксирует часть речи (не склоняет "делать" на "делающего", как pymorphy2).
+    def inflect(self, grammemes):
+        variants = []
+        for variant in self.variants:
+            inflected = variant.inflect(grammemes)
+            if inflected: variants.append(inflected)
+        if not len(variants): return None
+
+        own_poss = {g for v in self.variants for g in v.tag.grammemes if g in ABSTRACT_GRAMMEMES[POS]}
+        new_poss = {g for v in variants for g in v.tag.grammemes if g in ABSTRACT_GRAMMEMES[POS]}
+        poss = own_poss & new_poss
+        if not len(poss): return None
+        pos = poss.pop()
+        variants = [v for v in variants if pos in v.tag.grammemes]
+        if not len(variants): return None
+
+        text = variants[0].word
+        return Word(text, variants = [v for v in variants if v.word == text])

@@ -1,6 +1,6 @@
 from unittest import main, TestCase, skip
 from polymorphy import Word
-from polymorphy.constants import PREP, nomn, accs
+from polymorphy.constants import PREP, plur, nomn, gent, accs
 
 
 class TestWord(TestCase):
@@ -30,6 +30,23 @@ class TestWord(TestCase):
         self.assertTrue(len(constrained.variants) < len(word.variants))
         self.assertTrue(all(v.normal_form == 'лалал' for v in constrained.variants))
         self.assertTrue(any(v.normal_form != 'лалал' for v in word.variants))
+
+    def test_inflect(self):
+        word = Word('изба')
+        infd = word.inflect({plur, gent})
+        self.assertEqual(infd.text, 'изб')
+        self.assertTrue(all(plur in v.tag.grammemes for v in infd.variants))
+        self.assertTrue(all(gent in v.tag.grammemes for v in infd.variants))
+
+        word = Word('лалал')
+        infd = word.inflect({plur, gent})
+        self.assertEqual(infd.text, 'лалалов')
+        self.assertTrue(len(infd.variants) < len(word.variants))
+        self.assertTrue(all(plur in v.tag.grammemes for v in infd.variants))
+        self.assertTrue(all(gent in v.tag.grammemes for v in infd.variants))
+
+        self.assertEqual(Word('говорить').inflect({plur, gent}), None)
+        self.assertEqual(Word('на').inflect({plur, gent}), None)
 
 
 if __name__ == '__main__':

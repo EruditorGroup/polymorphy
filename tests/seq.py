@@ -1,6 +1,6 @@
 from unittest import main, TestCase, skip
 from polymorphy import Seq
-from polymorphy.constants import PREP
+from polymorphy.constants import PREP, gent, plur
 
 
 class TestSeq(TestCase):
@@ -37,6 +37,20 @@ class TestSeq(TestCase):
     def test_constrain_any(self):
         seq = Seq('зеленый перец')
         self.assertEqual(seq, seq.constrain('ANY'))
+
+    def test_inflect(self):
+        seq = Seq('ох золотая монета бы несколько')
+        inf = seq.inflect({gent, plur})
+        self.assertEqual(inf.text, 'ох золотых монет бы несколько')
+
+        seq = Seq('ох золотая монета бы несколько получить')
+        inf = seq.inflect({gent, plur})
+        self.assertEqual(inf, None)
+
+    def test_inflect_hard(self):
+        seq = Seq('ох золотая монета бы несколько')
+        inf = seq.inflect({gent, plur}, hard = True)
+        self.assertEqual(inf, None)
 
 
 if __name__ == '__main__':

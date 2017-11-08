@@ -1,5 +1,5 @@
 import re
-from .constants import ANY
+from .constants import ANY, ADVB, NPRO, PRED, PREP, CONJ, PRCL, INTJ
 from .word import Word
 
 
@@ -7,6 +7,7 @@ from .word import Word
 class Seq:
     __spaces_pattern = re.compile(r'[\s]+')
     __text = None
+    __noinflect = [ADVB, PRED, PREP, CONJ, PRCL, INTJ]
 
     def __init__(self, text = '', threshold = 0):
         self.threshold = threshold
@@ -81,4 +82,28 @@ class Seq:
             word = word.constrain(grammeme)
             if word is None: break
             words.append(word)
+        return Seq.from_words(words)
+
+    # Склоняет каждое слово по заданным граммемам.
+    # По умолчанию (hard = False) пропускает наречия, предикативы, предлоги, союзы, частицы и междометия.
+    # Возвращает None если хотя бы одно слово не получилось склонить.
+    def inflect(self, grammemes, hard = False):
+        words = []
+        for word in self.words:
+            inflected = word.inflect(grammemes)
+            if inflected:
+                words.append(inflected)
+                continue
+
+            if not hard:
+                constrained = None
+                for grammeme in self.__noinflect:
+                    constrained = word.constrain(grammeme)
+                    if constrained: break
+                if constrained:
+                    words.append(constrained)
+                    continue
+
+            return None
+
         return Seq.from_words(words)
