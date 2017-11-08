@@ -112,8 +112,11 @@ class TestPatternRepeat(TestCase):
         self.assertEqual(remains.text, 'дерево бежать одеяло')
 
     def test_match_min(self):
-        pattern = PatternRepeat(NOUN)[4:]
-        self.assertEqual(pattern.match(self.seq), None)
+        seq = Seq('топографической съемки местности')
+        found, remains = PatternRepeat(gent)[1:].match(seq)
+        self.assertEqual(found.text, seq.text)
+        self.assertEqual(len(remains), 0)
+        self.assertEqual(PatternRepeat(gent)[4:].match(seq), None)
 
 
 class TestPattern(TestCase):

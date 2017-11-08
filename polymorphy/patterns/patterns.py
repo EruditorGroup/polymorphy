@@ -133,11 +133,10 @@ class PatternRepeat(PatternAbstract):
     def match(self, seq):
         if type(seq) == str: seq = Seq(seq)
         if len(seq) < self.min: return None
-        max = self.max if self.max is not None else len(seq)
 
         found = []
         remains = seq
-        while (len(remains)) > self.min and (not self.max_repeats or len(found) < self.max_repeats):
+        while (len(remains)) >= self.min and (not self.max_repeats or len(found) < self.max_repeats):
             match = self.sub.match(remains)
             if not match: break
             more_found, remains = match
