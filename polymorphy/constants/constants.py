@@ -46,9 +46,16 @@ loct = 'loct' # предложный
 voct = 'voct' # звательный
 
 
+ANim = 'ANim' # одушевленность
+# ----------
+anim = 'anim' # одушевлённое
+inan = 'inan' # неодушевлённое
+
+
 ABSTRACT_GRAMMEMES = {
     POS:  [NOUN, ADJF, INFN, VERB],
     NMbr: [sing, plur],
     GNdr: [masc, femn, neut],
-    CAse: [nomn, gent, datv, accs, ablt, loct, voct]
+    CAse: [nomn, gent, datv, accs, ablt, loct, voct],
+    ANim: [anim, inan],
 }
