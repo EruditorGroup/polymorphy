@@ -26,6 +26,9 @@ class Word:
         if not isinstance(other, Word): return False
         return self.variants == other.variants
 
+    def __hash__(self):
+        return hash(tuple(self.variants))
+
     # Вернуть копию слова, содержащую только подмножество вариантов, содержащих указанную граммему.
     # Возвращает None, если вариантов нет.
     def constrain(self, grammeme):

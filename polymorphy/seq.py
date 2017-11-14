@@ -10,12 +10,14 @@ class Seq:
     __noinflect = [ADVB, PRED, PREP, CONJ, PRCL, INTJ]
 
     def __init__(self, text = '', threshold = 0):
-        self.threshold = threshold
-        self.words     = [Word(w, threshold = threshold) for w in Seq.__spaces_pattern.split(text) if len(w)]
+        self.words = [Word(w, threshold = threshold) for w in Seq.__spaces_pattern.split(text) if len(w)]
 
     def __eq__(self, other):
         if not isinstance(other, Seq): return False
         return self.words == other.words
+
+    def __hash__(self):
+        return hash(tuple(self.words))
 
     def __bool__(self):
         return len(self.words) > 0

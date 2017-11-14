@@ -6,8 +6,12 @@ class PatternAbstract:
     max = None
     min = None
 
+    def match(self, seq):
+        if type(seq) == str: seq = Seq(seq)
+        for match in self.match_gen(seq): return match
+
     def test(self, seq):
-        return self.match(seq) != None
+        for match in self.match_gen(seq): return match != None
 
 
 class PatternUnit(PatternAbstract):
@@ -17,11 +21,10 @@ class PatternUnit(PatternAbstract):
     def __init__(self, grammeme):
         self.grammeme = grammeme
 
-    def match(self, seq):
-        if type(seq) == str: seq = Seq(seq)
-        if len(seq) < self.min: return None
+    def match_gen(self, seq, lvl = 0):
+        if len(seq) < self.min: return
         found = seq[:1].constrain_find(self.grammeme)
-        return (found, seq[1:]) if found else None
+        if found: yield (found, seq[1:])
 
 
 class PatternWord(PatternAbstract):
@@ -30,10 +33,9 @@ class PatternWord(PatternAbstract):
     def __init__(self, word):
         self.word = word
 
-    def match(self, seq):
-        if type(seq) == str: seq = Seq(seq)
-        if not len(seq): return None
-        return (seq[:1], seq[1:]) if seq[0].text == self.word else None
+    def match_gen(self, seq, lvl = 0):
+        if not len(seq): return
+        if seq[0].text == self.word: yield (seq[:1], seq[1:])
 
 
 class PatternLexem(PatternAbstract):
@@ -42,16 +44,19 @@ class PatternLexem(PatternAbstract):
     def __init__(self, normal_form):
         self.normal_form = normal_form
 
-    def match(self, seq):
-        if type(seq) == str: seq = Seq(seq)
-        if not len(seq): return None
+    def match_gen(self, seq, lvl = 0):
+        if not len(seq): return
         word = seq.words[0].constrain_normal_form(self.normal_form)
-        return (Seq.from_words([word]), seq[1:]) if word else None
+        if word: yield (Seq.from_words([word]), seq[1:])
 
 
 class PatternSeq(PatternAbstract):
+    __rest = None
+
     def __init__(self, *parts):
         self.parts = [(p if isinstance(p, PatternAbstract) else PatternUnit(p)) for p in parts]
+        self.first = self.parts[0]
+        self.rest  = PatternSeq(*self.parts[1:]) if len(self.parts) > 1 else None
         self.min = sum(p.min for p in self.parts)
         self.max = 0
         for p in self.parts:
@@ -60,19 +65,15 @@ class PatternSeq(PatternAbstract):
                 break
             self.max += p.max
 
-    def match(self, seq):
-        if type(seq) == str: seq = Seq(seq)
-        if len(seq) < self.min: return None
+    def match_gen(self, seq, lvl = 0):
+        if len(seq) < self.min: return
 
-        found = []
-        for pattern in self.parts:
-            if len(seq) < pattern.min: return None
-            match = pattern.match(seq)
-            if not match: return None
-            more_found, seq = match
-            found.append(more_found)
-
-        return (sum(found) if found else Seq(), seq)
+        for found_first, remains_first in self.first.match_gen(seq, lvl + 1):
+            if not self.rest:
+                yield (found_first, remains_first)
+            else:
+                for found_rest, remains_rest in self.rest.match_gen(remains_first, lvl + 1):
+                    yield (found_first + found_rest, remains_rest)
 
 
 class PatternAny(PatternAbstract):
@@ -86,89 +87,115 @@ class PatternAny(PatternAbstract):
                 break
             self.max = max([self.max, v.max])
 
-    def match(self, seq):
-        if type(seq) == str: seq = Seq(seq)
-        if len(seq) < self.min: return None
+    def match_gen(self, seq, lvl = 0):
+        if len(seq) < self.min: return
         for pattern in self.patterns:
-            match = pattern.match(seq)
-            if match:
-                found, _ = match
-                return (found, seq[len(found):])
-        return None
+            for match in pattern.match_gen(seq, lvl + 1):
+                yield match
 
 
 class PatternAll(PatternAbstract):
     def __init__(self, *patterns):
-        self.patterns = [(p if isinstance(p, PatternAbstract) else PatternUnit(p)) for p in patterns]
-        self.min = max(v.min for v in self.patterns)
-        self.max = 0
-        for v in self.patterns:
+        patterns   = [(p if isinstance(p, PatternAbstract) else PatternUnit(p)) for p in patterns]
+        self.first = patterns[0]
+        self.rest  = PatternAll(*patterns[1:]) if len(patterns) > 1 else None
+        self.min   = max(v.min for v in patterns)
+        self.max   = 0
+        for v in patterns:
             if v.max is None:
                 self.max = None
                 break
             self.max = max([self.max, v.max])
 
-    def match(self, seq):
-        if type(seq) == str: seq = Seq(seq)
-        if len(seq) < self.min: return None
-        found = seq
-        for pattern in self.patterns:
-            match = pattern.match(found)
-            if not match: return None
-            found, _ = match
-        return (found, seq[len(found):])
+    def match_gen(self, seq, lvl = 0):
+        if len(seq) < self.min: return
+        for match in self.first.match_gen(seq, lvl + 1):
+            if not self.rest:
+                yield match
+            else:
+                for match in self.rest.match_gen(match[0], lvl + 1):
+                    yield match
 
 
 class PatternRepeat(PatternAbstract):
+    __rest = None
+
     def __init__(self, pattern = ANY, min = 0, max = None):
         self.min_repeats = min
         self.max_repeats = max
         self.sub = pattern if isinstance(pattern, PatternAbstract) else PatternUnit(pattern)
         self.min = self.sub.min * self.min_repeats
-        self.max = self.sub.max * self.max_repeats if self.sub.max and self.max_repeats else None
+        self.max = self.sub.max * self.max_repeats if self.sub.max != None and self.max_repeats != None else None
 
     def __getitem__(self, ix):
         return PatternRepeat(self.sub, ix.start or 0, ix.stop)
 
-    def match(self, seq):
-        if type(seq) == str: seq = Seq(seq)
-        if len(seq) < self.min: return None
+    def match_gen(self, seq, lvl = 0):
+        if len(seq) < self.min: return
+        if self.max_repeats == 0: return
 
-        found = []
-        remains = seq
-        while (len(remains)) >= self.min and (not self.max_repeats or len(found) < self.max_repeats):
-            match = self.sub.match(remains)
-            if not match: break
-            more_found, remains = match
-            found.append(more_found)
+        for found_first, remains_first in self.sub.match_gen(seq, lvl + 1):
+            should_try_more  = \
+                len(remains_first) \
+                and (len(remains_first) >= self.min - self.sub.min) \
+                and (self.max_repeats is None or self.max_repeats > 1)
+            must_try_more = self.min_repeats > 1
 
-        if len(found) < self.min_repeats: return None
+            if should_try_more:
+                for found_rest, remains_rest in self.rest.match_gen(remains_first, lvl + 1):
+                    yield (found_first + found_rest, remains_rest)
+            elif not must_try_more:
+                yield (found_first, remains_first)
 
-        found = sum(found) or Seq()
-        return (found, seq[len(found):])
+        if self.min_repeats == 0:
+            yield (Seq(), seq)
+
+    @property
+    def rest(self):
+        if self.__rest is None:
+            if self.min_repeats == 0 and self.max_repeats is None:
+                self.__rest = self
+            else:
+                self.__rest = PatternRepeat(
+                    self.sub,
+                    max(self.min_repeats - 1, 0),
+                    max(self.max_repeats - 1, 0) if self.max_repeats != None else None
+                )
+        return self.__rest
 
 
 class PatternSame(PatternAbstract):
-    def __init__(self, grammemes, pattern):
-        self.grammemes = [(ABSTRACT_GRAMMEMES[g] if g in ABSTRACT_GRAMMEMES else [g]) for g in grammemes]
-        self.sub = pattern if isinstance(pattern, PatternAbstract) else PatternUnit(pattern)
-        self.min = self.sub.min
-        self.max = self.sub.max
+    __rest = None
 
-    def match(self, seq):
-        if type(seq) == str: seq = Seq(seq)
-        if len(seq) < self.min: return None
+    def __init__(self, grms, pattern):
+        self.grms = [(ABSTRACT_GRAMMEMES[g] if g in ABSTRACT_GRAMMEMES else [g]) for g in grms]
+        self.rest = PatternSame(grms[1:], pattern) if len(grms) > 1 else None
+        self.sub  = pattern if isinstance(pattern, PatternAbstract) else PatternUnit(pattern)
+        self.min  = self.sub.min
+        self.max  = self.sub.max
+
+    def match_gen(self, seq, lvl = 0):
+        if len(seq) < self.min: return
+        constrained = self.constrain_same(seq)
+        for constrained in self.constrain_same(seq, lvl):
+            for found, _ in self.sub.match_gen(constrained, lvl + 1):
+                yield (found, seq[len(found):])
+
+    def constrain_same(self, seq, lvl = 0):
         max = self.max if self.max is not None else len(seq)
 
-        constrained = seq
-        for alternatives in self.grammemes:
-            candidate = Seq()
-            for grm in alternatives:
-                new_candidate = constrained.constrain_find(grm, max)
-                if len(new_candidate) > len(candidate): candidate = new_candidate
-            constrained = candidate
+        alternatives = []
+        for grm in self.grms[0]:
+            alternative = seq.constrain_find(grm, max)
+            if len(alternative) and len(alternative) >= self.min:
+                alternatives.append(alternative)
+        alternatives.sort(key = len, reverse = True)
 
-        match = self.sub.match(constrained)
-        if match is None: return None
-        found, _ = match
-        return (found, seq[len(found):])
+        for alternative in alternatives:
+            if self.rest:
+                for alternative in self.rest.constrain_same(alternative, lvl + 1):
+                    if len(alternative): yield alternative
+            else:
+                yield alternative
+
+        yield Seq()
