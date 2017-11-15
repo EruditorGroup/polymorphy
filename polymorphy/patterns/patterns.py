@@ -112,15 +112,15 @@ class PatternAny(PatternAbstract):
 
 
 class PatternAll(PatternAbstract):
-    __slots__ = ('min', 'max', 'first', 'rest')
+    __slots__ = ('min', 'max', 'first', 'rest', 'patterns')
 
     def __init__(self, *patterns):
-        patterns   = [(p if isinstance(p, PatternAbstract) else PatternUnit(p)) for p in patterns]
-        self.first = patterns[0]
-        self.rest  = PatternAll(*patterns[1:]) if len(patterns) > 1 else None
-        self.min   = max(v.min for v in patterns)
-        self.max   = 0
-        for v in patterns:
+        self.patterns = [(p if isinstance(p, PatternAbstract) else PatternUnit(p)) for p in patterns]
+        self.first    = self.patterns[0]
+        self.rest     = PatternAll(*self.patterns[1:]) if len(self.patterns) > 1 else None
+        self.min      = max(v.min for v in self.patterns)
+        self.max      = 0
+        for v in self.patterns:
             if v.max is None:
                 self.max = None
                 break

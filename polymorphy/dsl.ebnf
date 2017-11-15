@@ -1,0 +1,141 @@
+?pattern : pattern_unit
+         | pattern_word
+         | pattern_lexeme
+         | pattern_any
+         | pattern_all
+         | pattern_seq
+         | pattern_repeat
+         | pattern_maybe
+         | pattern_same
+         | pattern_named
+
+pattern_unit : grammeme
+
+pattern_word : "word(" ESCAPED_STRING ")"
+
+pattern_lexeme : "lexeme(" ESCAPED_STRING ")"
+
+pattern_any : "any" nested_patterns
+
+pattern_all : "all" nested_patterns
+
+pattern_seq : "seq" nested_patterns
+
+pattern_repeat : "repeat" ["(" [r_min] ":" [r_max] ")"] nested_pattern
+r_min : INT
+r_max : INT
+
+pattern_maybe : "maybe" nested_pattern
+
+pattern_same : "same(" grammeme+ ")" nested_pattern
+
+pattern_named : "named(" CNAME ")" nested_pattern
+
+nested_pattern : "{" pattern "}"
+
+nested_patterns : "{" pattern+ "}"
+
+?grammeme : grammeme_concrete
+          | grammeme_abstract
+
+?grammeme_concrete : grammeme_pos
+                   | grammeme_nmbr
+                   | grammeme_gndr
+                   | grammeme_case
+                   | grammeme_anim
+
+?grammeme_abstract : A_ANY
+                   | A_POS
+                   | A_NMBR
+                   | A_GNDR
+                   | A_CASE
+                   | A_ANIM
+
+?grammeme_pos : NOUN
+              | ADJF
+              | ADJS
+              | COMP
+              | VERB
+              | INFN
+              | PRTF
+              | PRTS
+              | GRND
+              | NUMR
+              | ADVB
+              | NPRO
+              | PRED
+              | PREP
+              | CONJ
+              | PRCL
+              | INTJ
+
+?grammeme_nmbr : SING
+               | PLUR
+
+?grammeme_gndr : MASC
+               | FEMN
+               | NEUT
+
+?grammeme_case : NOMN
+               | GENT
+               | DATV
+               | ACCS
+               | ABLT
+               | LOCT
+               | VOCT
+
+?grammeme_anim : ANIM
+               | INAN
+
+A_ANY  : "ANY"  // любая граммема
+A_POS  : "POS"  // часть речи
+A_NMBR : "NMbr" // число
+A_GNDR : "GNdr" // род
+A_CASE : "CAse" // падеж
+A_ANIM : "ANim" // одушевленность
+
+NOUN : "NOUN" // имя существительное
+ADJF : "ADJF" // имя прилагательное (полное)
+ADJS : "ADJS" // имя прилагательное (краткое)
+COMP : "COMP" // компаратив
+VERB : "VERB" // глагол (личная форма)
+INFN : "INFN" // глагол (инфинитив)
+PRTF : "PRTF" // причастие (полное)
+PRTS : "PRTS" // причастие (краткое)
+GRND : "GRND" // деепричастие
+NUMR : "NUMR" // числительное
+ADVB : "ADVB" // наречие
+NPRO : "NPRO" // местоимение-существительное
+PRED : "PRED" // предикатив
+PREP : "PREP" // предлог
+CONJ : "CONJ" // союз
+PRCL : "PRCL" // частица
+INTJ : "INTJ" // междометие
+
+SING : "sing" // единственное
+PLUR : "plur" // множественное
+
+MASC : "masc" // мужской
+FEMN : "femn" // женский
+NEUT : "neut" // средний
+
+NOMN : "nomn" // именительный
+GENT : "gent" // родительный
+DATV : "datv" // дательный
+ACCS : "accs" // винительный
+ABLT : "ablt" // творительный
+LOCT : "loct" // предложный
+VOCT : "voct" // звательный
+
+ANIM : "anim" // одушевленное
+INAN : "inan" // неодушевленное
+
+%import common.WS             -> WS
+%import common.INT            -> INT
+%import common.CNAME          -> CNAME
+%import common.ESCAPED_STRING -> ESCAPED_STRING
+
+COMMA : ","
+
+%ignore WS
+%ignore COMMA

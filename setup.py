@@ -8,9 +8,11 @@ setup(name='polymorphy',
       author_email='thaumant@gmail.com',
       license='MIT',
       packages=['polymorphy', 'polymorphy.constants', 'polymorphy.patterns'],
+      package_data={'polymorphy': ['dsl.ebnf']},
       zip_safe=False,
       install_requires=[
           'pymorphy2',
+          'lark-parser',
       ],
       classifiers=[
           'Development Status :: 3 - Alpha',
