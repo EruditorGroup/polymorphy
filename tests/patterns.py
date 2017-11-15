@@ -1,8 +1,33 @@
 from unittest import main, TestCase, skip
 from polymorphy import Seq
-from polymorphy.constants import ABSTRACT_GRAMMEMES
-from polymorphy.constants import ANY, CAse, GNdr, NOUN, ADJF, INFN, VERB, PRTF, nomn, gent, accs, sing, plur, femn
-from polymorphy.patterns import PatternUnit, PatternWord, PatternLexem, PatternAny, PatternAll, PatternRepeat, PatternSeq, PatternSame
+from polymorphy.constants import *
+from polymorphy.patterns import *
+
+
+class TestMatch(TestCase):
+    def test_merge_groups(self):
+        gs1 = {'foo': [Seq('бежать')], 'baz': [], 'qux': [Seq('стол')]}
+        gs2 = {'foo': [Seq('одеяло')], 'bar': [Seq('наверное')]}
+        gs3 = Match.merge_groups(gs1, gs2)
+        self.assertEqual(gs3, {
+            'foo': [Seq('бежать'), Seq('одеяло')],
+            'baz': [],
+            'qux': [Seq('стол')],
+            'bar': [Seq('наверное')],
+        })
+        self.assertTrue(gs3['qux'] is gs1['qux'])
+        self.assertTrue(gs3['bar'] is gs2['bar'])
+
+    def test_add(self):
+        m1 = Match(Seq('бежать'), {'foo': ['а']})
+        m2 = Match(Seq('одеяло'), {'bar': ['и']})
+        m3 = m1 + m2
+        self.assertEqual(m3.seq, m1.seq + m2.seq)
+        self.assertEqual(m3.groups, Match.merge_groups(m1.groups, m2.groups))
+
+    def test_repr(self):
+        m = Match(Seq('бежать'), {'foo': [Seq('а'), Seq('и')], 'bar': [Seq('в')]})
+        self.assertEqual(m.__repr__(), 'Match(бежать×2 / 3g)')
 
 
 class TestPatternUnit(TestCase):
@@ -11,7 +36,7 @@ class TestPatternUnit(TestCase):
         seq     = Seq('бежать одеяло наверное')
         matches = list(pattern.match_gen(seq))
         self.assertEqual(len(matches), 1)
-        self.assertEqual(matches[0].text, 'бежать')
+        self.assertEqual(matches[0].seq.text, 'бежать')
 
     def test_mismatch(self):
         pattern = PatternUnit(NOUN)
@@ -23,7 +48,7 @@ class TestPatternUnit(TestCase):
         seq     = Seq('бежать одеяло наверное')
         matches = list(pattern.match_gen(seq))
         self.assertEqual(len(matches), 1)
-        self.assertEqual(matches[0].text, 'бежать')
+        self.assertEqual(matches[0].seq.text, 'бежать')
 
 
 class TestPatternWord(TestCase):
@@ -32,8 +57,8 @@ class TestPatternWord(TestCase):
         seq     = Seq('столы большие')
         matches = list(pattern.match_gen(seq))
         self.assertEqual(len(matches), 1)
-        self.assertEqual(matches[0].text, 'столы')
-        self.assertEqual(matches[0][0], seq[0])
+        self.assertEqual(matches[0].seq.text, 'столы')
+        self.assertEqual(matches[0].seq[0], seq[0])
 
     def test_mismatch(self):
         pattern = PatternWord('стол')
@@ -47,7 +72,7 @@ class TestPatternLexem(TestCase):
         seq     = Seq('столы большие')
         matches = list(pattern.match_gen(seq))
         self.assertEqual(len(matches), 1)
-        self.assertEqual(matches[0].text, 'столы')
+        self.assertEqual(matches[0].seq.text, 'столы')
 
     def test_mismatch(self):
         pattern = PatternLexem('стул')
@@ -63,8 +88,8 @@ class TestPatternAny(TestCase):
         self.assertFalse(all(accs in v.tag for v in seq.words[0].variants))
         matches = list(pattern.match_gen(seq))
         self.assertEqual(len(matches), 2)
-        self.assertTrue(all(ADJF in v.tag for v in matches[0].words[0].variants))
-        self.assertTrue(all(accs in v.tag for v in matches[1].words[0].variants))
+        self.assertTrue(all(ADJF in v.tag for v in matches[0].seq.words[0].variants))
+        self.assertTrue(all(accs in v.tag for v in matches[1].seq.words[0].variants))
 
     def test_mismatch(self):
         pattern = PatternAny(ADJF, VERB)
@@ -80,7 +105,7 @@ class TestPatternAll(TestCase):
         self.assertFalse(all(ADJF in variant.tag.grammemes for variant in seq.words[0].variants))
         matches = list(pattern.match_gen(seq))
         self.assertEqual(len(matches), 1)
-        for variant in matches[0].words[0].variants:
+        for variant in matches[0].seq.words[0].variants:
             self.assertTrue(accs in variant.tag.grammemes)
             self.assertTrue(ADJF in variant.tag.grammemes)
 
@@ -95,7 +120,7 @@ class TestPatternRepeat(TestCase):
         seq     = Seq('большая круглая перламутровая пуговица')
         pattern = PatternRepeat(ADJF)
         matches = list(pattern.match_gen(seq))
-        texts   = [match.text for match in matches]
+        texts   = [match.seq.text for match in matches]
         self.assertEqual(texts, [
             'большая круглая перламутровая',
             'большая круглая',
@@ -107,7 +132,7 @@ class TestPatternRepeat(TestCase):
         seq     = Seq('большая круглая перламутровая пуговица')
         pattern = PatternRepeat(INFN)
         matches = list(pattern.match_gen(seq))
-        texts   = [match.text for match in matches]
+        texts   = [match.seq.text for match in matches]
         self.assertEqual(texts, [
             '',
         ])
@@ -116,7 +141,7 @@ class TestPatternRepeat(TestCase):
         seq     = Seq('большая круглая перламутровая пуговица')
         pattern = PatternRepeat(ADJF)[:2]
         matches = list(pattern.match_gen(seq))
-        texts   = [match.text for match in matches]
+        texts   = [match.seq.text for match in matches]
         self.assertEqual(texts, [
             'большая круглая',
             'большая',
@@ -127,7 +152,7 @@ class TestPatternRepeat(TestCase):
         seq     = Seq('большая круглая перламутровая пуговица')
         pattern = PatternRepeat(ADJF)[1:]
         matches = list(pattern.match_gen(seq))
-        texts   = [match.text for match in matches]
+        texts   = [match.seq.text for match in matches]
         self.assertEqual(texts, [
             'большая круглая перламутровая',
             'большая круглая',
@@ -147,7 +172,7 @@ class TestPatternSeq(TestCase):
         seq     = Seq('дерево бежать одеяло')
         matches = list(pattern.match_gen(seq))
         self.assertEqual(len(matches), 1)
-        self.assertEqual(matches[0].text, 'дерево бежать')
+        self.assertEqual(matches[0].seq.text, 'дерево бежать')
 
     def test_mismatch(self):
         pattern = PatternSeq(NOUN, INFN)
@@ -191,7 +216,7 @@ class TestPatternSame(TestCase):
         pattern = PatternSame([CAse], PatternSeq(ADJF, NOUN))
         seq     = Seq('зеленый стол в углу')
         matches = list(pattern.match_gen(seq))
-        texts   = [match.text for match in matches]
+        texts   = [match.seq.text for match in matches]
         self.assertEqual(texts, [
             'зеленый стол', # nomn
             'зеленый стол', # accs
@@ -207,7 +232,7 @@ class TestComplex(TestCase):
     def test_same_repeat(self):
         pattern = PatternSame([GNdr], PatternRepeat(ANY))
         seq     = Seq('большая зеленая деревянное круглая')
-        texts   = [match.text for match in pattern.match_gen(seq)]
+        texts   = [match.seq.text for match in pattern.match_gen(seq)]
         self.assertEqual(texts, ['большая зеленая', 'большая', '', ''])
 
     def test_seqence_any(self):
@@ -217,10 +242,10 @@ class TestComplex(TestCase):
         seq3    = Seq('стол зеленый делать')
         match1  = pattern.match(seq1)
         match2  = pattern.match(seq2)
-        text1   = [match.text for match in pattern.match_gen(seq1)]
-        text2   = [match.text for match in pattern.match_gen(seq2)]
-        self.assertEqual(match1.text, 'зеленый делать')
-        self.assertEqual(match2.text, 'зеленый стол')
+        text1   = [match.seq.text for match in pattern.match_gen(seq1)]
+        text2   = [match.seq.text for match in pattern.match_gen(seq2)]
+        self.assertEqual(match1.seq.text, 'зеленый делать')
+        self.assertEqual(match2.seq.text, 'зеленый стол')
         self.assertEqual(pattern.match(seq3), None)
 
     def test_sequence_repeat(self):
@@ -229,10 +254,10 @@ class TestComplex(TestCase):
         seq2    = Seq('зеленый стол делать')
         seq3    = Seq('зеленый')
         seq4    = Seq('стол зеленый делать стоять')
-        texts1  = [match.text for match in pattern.match_gen(seq1)]
-        texts2  = [match.text for match in pattern.match_gen(seq2)]
-        texts3  = [match.text for match in pattern.match_gen(seq3)]
-        texts4  = [match.text for match in pattern.match_gen(seq4)]
+        texts1  = [match.seq.text for match in pattern.match_gen(seq1)]
+        texts2  = [match.seq.text for match in pattern.match_gen(seq2)]
+        texts3  = [match.seq.text for match in pattern.match_gen(seq3)]
+        texts4  = [match.seq.text for match in pattern.match_gen(seq4)]
         self.assertEqual(texts1, ['зеленый делать стоять', 'зеленый делать', 'зеленый'])
         self.assertEqual(texts2, ['зеленый стол делать', 'зеленый стол', 'зеленый'])
         self.assertEqual(texts3, ['зеленый'])
@@ -242,7 +267,7 @@ class TestComplex(TestCase):
         seq     = Seq('большой стол')
         pattern = PatternRepeat(PatternAny(nomn, accs))
         matches = list(pattern.match_gen(seq))
-        texts   = [match.text for match in matches]
+        texts   = [match.seq.text for match in matches]
         self.assertEqual(texts, [
             'большой стол', # nomn nomn
             'большой стол', # nomn accs
@@ -262,7 +287,7 @@ class TestComplex(TestCase):
             ),
         )
         matches = list(pattern.match_gen(seq))
-        texts   = [texts.text for texts in matches]
+        texts   = [match.seq.text for match in matches]
         self.assertEqual(texts, [
             'тихий скрип гладкой медной ручки входной двери',
             'тихий скрип гладкой медной ручки',
@@ -270,5 +295,51 @@ class TestComplex(TestCase):
         ])
 
 
-# if __name__ == '__main__':
-#     unittest.main()
+class TestNamed(TestCase):
+    def test_simple(self):
+        seq     = Seq('тихий скрип медной ручки')
+        pattern = PatternNamed('foo', PatternSeq(ADJF, NOUN))
+        match   = pattern.match(seq)
+        self.assertEqual(len(match.groups), 1)
+        self.assertEqual(len(match.groups['foo']), 1)
+        self.assertEqual(match.groups['foo'][0].text, 'тихий скрип')
+
+    def test_offset(self):
+        seq = Seq('тихий скрип медной ручки входной двери')
+        pattern = pattern = PatternSeq(
+            PatternSame([GNdr, nomn], PatternSeq(PatternRepeat(ADJF), NOUN)),
+            PatternRepeat(PatternNamed('obj',
+                PatternSame([GNdr, gent], PatternSeq(PatternRepeat(ADJF), NOUN))
+            )),
+        )
+        matches = list(pattern.match_gen(seq))
+        groups_texts = []
+        for match in matches:
+            groups_texts.append({n: [s.text for s in g] for n, g in match.groups.items()})
+        self.assertEqual(groups_texts, [
+            {'obj': ['медной ручки', 'входной двери']},
+            {'obj': ['медной ручки']},
+            {}
+        ])
+
+    def test_double(self):
+        seq = Seq('тихий скрип медной ручки входной двери')
+        pattern = pattern = PatternSeq(
+            PatternNamed('act', PatternSame([GNdr, nomn], PatternSeq(PatternRepeat(ADJF), NOUN))),
+            PatternRepeat(PatternNamed('obj',
+                PatternSame([GNdr, gent], PatternSeq(PatternRepeat(ADJF), NOUN))
+            )),
+        )
+        matches = list(pattern.match_gen(seq))
+        groups_texts = []
+        for match in matches:
+            groups_texts.append({n: [s.text for s in g] for n, g in match.groups.items()})
+        self.assertEqual(groups_texts, [
+            {'act': ['тихий скрип'], 'obj': ['медной ручки', 'входной двери']},
+            {'act': ['тихий скрип'], 'obj': ['медной ручки']},
+            {'act': ['тихий скрип']},
+        ])
+
+
+if __name__ == '__main__':
+    unittest.main()

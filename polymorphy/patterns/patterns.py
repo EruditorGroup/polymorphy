@@ -2,6 +2,41 @@ from ..seq import Seq
 from ..constants import ANY, ABSTRACT_GRAMMEMES
 
 
+class Match:
+    def __init__(self, seq, groups = {}):
+        self.seq    = seq
+        self.groups = groups
+
+    def __add__(self, other):
+        return Match(self.seq + other.seq, Match.merge_groups(self.groups, other.groups))
+
+    def __repr__(self):
+        seq_repr = ' '.join(w.__repr__() for w in self.seq.words)
+
+        count    = 0
+        for n, g in self.groups.items(): count += len(g)
+        grp_repr = (' / ' + str(count) + 'g') if len(self.groups) else ''
+
+        return 'Match(' + seq_repr + grp_repr + ')'
+
+    @staticmethod
+    def merge_groups(gs1, gs2):
+        if len(gs1) and len(gs2):
+            gs3 = {}
+            for name, group in gs1.items():
+                if name in gs2 and len(gs2[name]):
+                    gs3[name] = list(group) # will be extended, should copy
+                else:
+                    gs3[name] = group
+            for name, group in gs2.items():
+                if name not in gs3: gs3[name] = gs2[name]
+                else: gs3[name] = gs1[name] + gs2[name]
+        else:
+            gs3 = gs1 or gs2
+
+        return gs3
+
+
 class PatternAbstract:
     max = None
     min = None
@@ -24,7 +59,7 @@ class PatternUnit(PatternAbstract):
     def match_gen(self, seq, lvl = 0):
         if len(seq) < self.min: return
         found = seq[:1].constrain_find(self.grammeme)
-        if found: yield found
+        if found: yield Match(found)
 
 
 class PatternWord(PatternAbstract):
@@ -35,7 +70,7 @@ class PatternWord(PatternAbstract):
 
     def match_gen(self, seq, lvl = 0):
         if not len(seq): return
-        if seq[0].text == self.word: yield seq[:1]
+        if seq[0].text == self.word: yield Match(seq[:1])
 
 
 class PatternLexem(PatternAbstract):
@@ -47,33 +82,7 @@ class PatternLexem(PatternAbstract):
     def match_gen(self, seq, lvl = 0):
         if not len(seq): return
         word = seq.words[0].constrain_normal_form(self.normal_form)
-        if word: yield Seq.from_words([word])
-
-
-class PatternSeq(PatternAbstract):
-    __rest = None
-
-    def __init__(self, *parts):
-        self.parts = [(p if isinstance(p, PatternAbstract) else PatternUnit(p)) for p in parts]
-        self.first = self.parts[0]
-        self.rest  = PatternSeq(*self.parts[1:]) if len(self.parts) > 1 else None
-        self.min = sum(p.min for p in self.parts)
-        self.max = 0
-        for p in self.parts:
-            if p.max is None:
-                self.max = None
-                break
-            self.max += p.max
-
-    def match_gen(self, seq, lvl = 0):
-        if len(seq) < self.min: return
-
-        for match_head in self.first.match_gen(seq, lvl + 1):
-            if not self.rest:
-                yield match_head
-            else:
-                for match_tail in self.rest.match_gen(seq[len(match_head):], lvl + 1):
-                    yield match_head + match_tail
+        if word: yield Match(Seq.from_words([word]))
 
 
 class PatternAny(PatternAbstract):
@@ -109,12 +118,39 @@ class PatternAll(PatternAbstract):
 
     def match_gen(self, seq, lvl = 0):
         if len(seq) < self.min: return
-        for match in self.first.match_gen(seq, lvl + 1):
+        for match_first in self.first.match_gen(seq, lvl + 1):
             if not self.rest:
-                yield match
+                yield match_first
             else:
-                for match in self.rest.match_gen(match, lvl + 1):
-                    yield match
+                for match_rest in self.rest.match_gen(match_first.seq, lvl + 1):
+                    groups = Match.merge_groups(match_first.groups, match_rest.groups)
+                    yield Match(match_rest.seq, groups)
+
+
+class PatternSeq(PatternAbstract):
+    __rest = None
+
+    def __init__(self, *parts):
+        self.parts = [(p if isinstance(p, PatternAbstract) else PatternUnit(p)) for p in parts]
+        self.first = self.parts[0]
+        self.rest  = PatternSeq(*self.parts[1:]) if len(self.parts) > 1 else None
+        self.min = sum(p.min for p in self.parts)
+        self.max = 0
+        for p in self.parts:
+            if p.max is None:
+                self.max = None
+                break
+            self.max += p.max
+
+    def match_gen(self, seq, lvl = 0):
+        if len(seq) < self.min: return
+
+        for match_head in self.first.match_gen(seq, lvl + 1):
+            if not self.rest:
+                yield match_head
+            else:
+                for match_tail in self.rest.match_gen(seq[len(match_head.seq):], lvl + 1):
+                    yield match_head + match_tail
 
 
 class PatternRepeat(PatternAbstract):
@@ -136,19 +172,19 @@ class PatternRepeat(PatternAbstract):
 
         for match_head in self.sub.match_gen(seq, lvl + 1):
             should_try_more  = \
-                len(seq) > len(match_head) \
-                and (len(seq) - len(match_head) >= self.min - self.sub.min) \
+                len(seq) > len(match_head.seq) \
+                and (len(seq) - len(match_head.seq) >= self.min - self.sub.min) \
                 and (self.max_repeats is None or self.max_repeats > 1)
             must_try_more = self.min_repeats > 1
 
             if should_try_more:
-                for match_tail in self.rest.match_gen(seq[len(match_head):], lvl + 1):
+                for match_tail in self.rest.match_gen(seq[len(match_head.seq):], lvl + 1):
                     yield match_head + match_tail
             elif not must_try_more:
                 yield match_head
 
         if self.min_repeats == 0:
-            yield Seq()
+            yield Match(Seq())
 
     @property
     def rest(self):
@@ -199,3 +235,16 @@ class PatternSame(PatternAbstract):
                 yield alternative
 
         yield Seq()
+
+class PatternNamed(PatternAbstract):
+    def __init__(self, name, pattern):
+        self.sub  = pattern if isinstance(pattern, PatternAbstract) else PatternUnit(pattern)
+        self.name = name
+        self.min  = self.sub.min
+        self.max  = self.sub.max
+
+    def match_gen(self, seq, lvl = 0):
+        name = self.name
+        for match in self.sub.match_gen(seq):
+            groups = {self.name: [match.seq]}
+            yield Match(match.seq, groups)

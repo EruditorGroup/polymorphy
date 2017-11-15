@@ -40,6 +40,7 @@ class Seq:
     def __add__(self, other):
         if not other: return self
         if type(other) == str: other = Seq(other)
+        if not self: return other
         words = []
         for word in self.words:  words.append(word)
         for word in other.words: words.append(word)
