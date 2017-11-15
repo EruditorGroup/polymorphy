@@ -66,16 +66,16 @@ class TestPatternWord(TestCase):
         self.assertEqual(len(list(pattern.match_gen(seq))), 0)
 
 
-class TestPatternLexem(TestCase):
+class TestPatternLexeme(TestCase):
     def test_match(self):
-        pattern = PatternLexem('стол')
+        pattern = PatternLexeme('стол')
         seq     = Seq('столы большие')
         matches = list(pattern.match_gen(seq))
         self.assertEqual(len(matches), 1)
         self.assertEqual(matches[0].seq.text, 'столы')
 
     def test_mismatch(self):
-        pattern = PatternLexem('стул')
+        pattern = PatternLexeme('стул')
         seq     = Seq('столы большие')
         self.assertEqual(len(list(pattern.match_gen(seq))), 0)
 

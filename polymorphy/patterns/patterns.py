@@ -77,7 +77,7 @@ class PatternWord(PatternAbstract):
         if seq[0].text == self.word: yield Match(seq[:1])
 
 
-class PatternLexem(PatternAbstract):
+class PatternLexeme(PatternAbstract):
     __slots__ = ('min', 'max', 'normal_form')
 
     def __init__(self, normal_form):
