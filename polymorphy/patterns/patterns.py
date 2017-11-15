@@ -24,7 +24,7 @@ class PatternUnit(PatternAbstract):
     def match_gen(self, seq, lvl = 0):
         if len(seq) < self.min: return
         found = seq[:1].constrain_find(self.grammeme)
-        if found: yield (found, seq[1:])
+        if found: yield found
 
 
 class PatternWord(PatternAbstract):
@@ -35,7 +35,7 @@ class PatternWord(PatternAbstract):
 
     def match_gen(self, seq, lvl = 0):
         if not len(seq): return
-        if seq[0].text == self.word: yield (seq[:1], seq[1:])
+        if seq[0].text == self.word: yield seq[:1]
 
 
 class PatternLexem(PatternAbstract):
@@ -47,7 +47,7 @@ class PatternLexem(PatternAbstract):
     def match_gen(self, seq, lvl = 0):
         if not len(seq): return
         word = seq.words[0].constrain_normal_form(self.normal_form)
-        if word: yield (Seq.from_words([word]), seq[1:])
+        if word: yield Seq.from_words([word])
 
 
 class PatternSeq(PatternAbstract):
@@ -68,12 +68,12 @@ class PatternSeq(PatternAbstract):
     def match_gen(self, seq, lvl = 0):
         if len(seq) < self.min: return
 
-        for found_first, remains_first in self.first.match_gen(seq, lvl + 1):
+        for match_head in self.first.match_gen(seq, lvl + 1):
             if not self.rest:
-                yield (found_first, remains_first)
+                yield match_head
             else:
-                for found_rest, remains_rest in self.rest.match_gen(remains_first, lvl + 1):
-                    yield (found_first + found_rest, remains_rest)
+                for match_tail in self.rest.match_gen(seq[len(match_head):], lvl + 1):
+                    yield match_head + match_tail
 
 
 class PatternAny(PatternAbstract):
@@ -113,7 +113,7 @@ class PatternAll(PatternAbstract):
             if not self.rest:
                 yield match
             else:
-                for match in self.rest.match_gen(match[0], lvl + 1):
+                for match in self.rest.match_gen(match, lvl + 1):
                     yield match
 
 
@@ -134,21 +134,21 @@ class PatternRepeat(PatternAbstract):
         if len(seq) < self.min: return
         if self.max_repeats == 0: return
 
-        for found_first, remains_first in self.sub.match_gen(seq, lvl + 1):
+        for match_head in self.sub.match_gen(seq, lvl + 1):
             should_try_more  = \
-                len(remains_first) \
-                and (len(remains_first) >= self.min - self.sub.min) \
+                len(seq) > len(match_head) \
+                and (len(seq) - len(match_head) >= self.min - self.sub.min) \
                 and (self.max_repeats is None or self.max_repeats > 1)
             must_try_more = self.min_repeats > 1
 
             if should_try_more:
-                for found_rest, remains_rest in self.rest.match_gen(remains_first, lvl + 1):
-                    yield (found_first + found_rest, remains_rest)
+                for match_tail in self.rest.match_gen(seq[len(match_head):], lvl + 1):
+                    yield match_head + match_tail
             elif not must_try_more:
-                yield (found_first, remains_first)
+                yield match_head
 
         if self.min_repeats == 0:
-            yield (Seq(), seq)
+            yield Seq()
 
     @property
     def rest(self):
@@ -178,8 +178,8 @@ class PatternSame(PatternAbstract):
         if len(seq) < self.min: return
         constrained = self.constrain_same(seq)
         for constrained in self.constrain_same(seq, lvl):
-            for found, _ in self.sub.match_gen(constrained, lvl + 1):
-                yield (found, seq[len(found):])
+            for match in self.sub.match_gen(constrained, lvl + 1):
+                yield match
 
     def constrain_same(self, seq, lvl = 0):
         max = self.max if self.max is not None else len(seq)
