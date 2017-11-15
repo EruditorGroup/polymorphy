@@ -4,13 +4,15 @@ from .word import Word
 
 
 # Предложение - последовательность слов.
-class Seq:
+class Seq(object):
+    __slots__ = ('__text', 'words')
+
     __spaces_pattern = re.compile(r'[\s]+')
-    __text = None
     __noinflect = [ADVB, PRED, PREP, CONJ, PRCL, INTJ]
 
     def __init__(self, text = '', threshold = 0):
-        self.words = [Word(w, threshold = threshold) for w in Seq.__spaces_pattern.split(text) if len(w)]
+        self.__text = None
+        self.words  = [Word(w, threshold = threshold) for w in Seq.__spaces_pattern.split(text) if len(w)]
 
     def __eq__(self, other):
         if not isinstance(other, Seq): return False
@@ -33,9 +35,7 @@ class Seq:
 
     def __getitem__(self, ix):
         if type(ix) == int: return self.words[ix]
-        seq = Seq.__new__(Seq)
-        seq.words = self.words[ix]
-        return seq
+        return Seq.from_words(self.words[ix])
 
     def __add__(self, other):
         if not other: return self
@@ -61,8 +61,9 @@ class Seq:
 
     @staticmethod
     def from_words(words):
-        seq = Seq.__new__(Seq)
-        seq.words = words
+        seq        = Seq.__new__(Seq)
+        seq.__text = None
+        seq.words  = words
         return seq
 
     # Возвращает копию предложения, в которой все варианты слов содержат указанную граммему.
@@ -100,7 +101,7 @@ class Seq:
 
             if not hard:
                 constrained = None
-                for grammeme in self.__noinflect:
+                for grammeme in Seq.__noinflect:
                     constrained = word.constrain(grammeme)
                     if constrained: break
                 if constrained:

@@ -2,7 +2,9 @@ from ..seq import Seq
 from ..constants import ANY, ABSTRACT_GRAMMEMES
 
 
-class Match:
+class Match(object):
+    __slots__ = ('seq', 'groups')
+
     def __init__(self, seq, groups = {}):
         self.seq    = seq
         self.groups = groups
@@ -37,9 +39,8 @@ class Match:
         return gs3
 
 
-class PatternAbstract:
-    max = None
-    min = None
+class PatternAbstract(object):
+    __slots__ = tuple()
 
     def match(self, seq):
         if type(seq) == str: seq = Seq(seq)
@@ -50,10 +51,11 @@ class PatternAbstract:
 
 
 class PatternUnit(PatternAbstract):
-    min = 1
-    max = 1
+    __slots__ = ('min', 'max', 'grammeme')
 
     def __init__(self, grammeme):
+        self.min = 1
+        self.max = 1
         self.grammeme = grammeme
 
     def match_gen(self, seq, lvl = 0):
@@ -63,9 +65,11 @@ class PatternUnit(PatternAbstract):
 
 
 class PatternWord(PatternAbstract):
-    min = 1
-    max = 1
+    __slots__ = ('min', 'max', 'word')
+
     def __init__(self, word):
+        self.min = 1
+        self.max = 1
         self.word = word
 
     def match_gen(self, seq, lvl = 0):
@@ -74,9 +78,11 @@ class PatternWord(PatternAbstract):
 
 
 class PatternLexem(PatternAbstract):
-    min = 1
-    max = 1
+    __slots__ = ('min', 'max', 'normal_form')
+
     def __init__(self, normal_form):
+        self.min = 1
+        self.max = 1
         self.normal_form = normal_form
 
     def match_gen(self, seq, lvl = 0):
@@ -86,6 +92,8 @@ class PatternLexem(PatternAbstract):
 
 
 class PatternAny(PatternAbstract):
+    __slots__ = ('min', 'max', 'patterns')
+
     def __init__(self, *patterns):
         self.patterns = [(p if isinstance(p, PatternAbstract) else PatternUnit(p)) for p in patterns]
         self.min = min(v.min for v in self.patterns)
@@ -104,6 +112,8 @@ class PatternAny(PatternAbstract):
 
 
 class PatternAll(PatternAbstract):
+    __slots__ = ('min', 'max', 'first', 'rest')
+
     def __init__(self, *patterns):
         patterns   = [(p if isinstance(p, PatternAbstract) else PatternUnit(p)) for p in patterns]
         self.first = patterns[0]
@@ -128,7 +138,7 @@ class PatternAll(PatternAbstract):
 
 
 class PatternSeq(PatternAbstract):
-    __rest = None
+    __slots__ = ('min', 'max', 'first', 'rest', 'parts')
 
     def __init__(self, *parts):
         self.parts = [(p if isinstance(p, PatternAbstract) else PatternUnit(p)) for p in parts]
@@ -154,9 +164,10 @@ class PatternSeq(PatternAbstract):
 
 
 class PatternRepeat(PatternAbstract):
-    __rest = None
+    __slots__ = ('min', 'max', 'min_repeats', 'max_repeats', 'sub', '__rest')
 
     def __init__(self, pattern = ANY, min = 0, max = None):
+        self.__rest      = None
         self.min_repeats = min
         self.max_repeats = max
         self.sub = pattern if isinstance(pattern, PatternAbstract) else PatternUnit(pattern)
@@ -201,14 +212,14 @@ class PatternRepeat(PatternAbstract):
 
 
 class PatternSame(PatternAbstract):
-    __rest = None
+    __slots__ = ('min', 'max', 'sub', 'grms', 'rest')
 
     def __init__(self, grms, pattern):
-        self.grms = [(ABSTRACT_GRAMMEMES[g] if g in ABSTRACT_GRAMMEMES else [g]) for g in grms]
-        self.rest = PatternSame(grms[1:], pattern) if len(grms) > 1 else None
-        self.sub  = pattern if isinstance(pattern, PatternAbstract) else PatternUnit(pattern)
-        self.min  = self.sub.min
-        self.max  = self.sub.max
+        self.grms   = [(ABSTRACT_GRAMMEMES[g] if g in ABSTRACT_GRAMMEMES else [g]) for g in grms]
+        self.rest   = PatternSame(grms[1:], pattern) if len(grms) > 1 else None
+        self.sub    = pattern if isinstance(pattern, PatternAbstract) else PatternUnit(pattern)
+        self.min    = self.sub.min
+        self.max    = self.sub.max
 
     def match_gen(self, seq, lvl = 0):
         if len(seq) < self.min: return
@@ -237,6 +248,8 @@ class PatternSame(PatternAbstract):
         yield Seq()
 
 class PatternNamed(PatternAbstract):
+    __slots__ = ('min', 'max', 'sub', 'name')
+
     def __init__(self, name, pattern):
         self.sub  = pattern if isinstance(pattern, PatternAbstract) else PatternUnit(pattern)
         self.name = name

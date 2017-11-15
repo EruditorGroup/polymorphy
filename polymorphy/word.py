@@ -3,19 +3,20 @@ from .constants import ANY, ABSTRACT_GRAMMEMES, POS
 
 
 # Слово представляет строку + набор вариантов его интерпретации с помощью pymorphy2.MorphAnalyzer.
-class Word:
+class Word(object):
+    __slots__ = ('text', 'threshold', '__variants')
+
     __morph = pymorphy2.MorphAnalyzer()
-    __variants = None
 
     def __init__(self, text, threshold = 0, variants = None):
-        self.text      = text
-        self.threshold = threshold
-        if variants: self.__variants = [v for v in variants if v.score > threshold]
+        self.text       = text
+        self.threshold  = threshold
+        self.__variants = [v for v in variants if v.score > threshold] if variants else None
 
     @property
     def variants(self):
         if self.__variants is None:
-            self.__variants = [v for v in self.__morph.parse(self.text) if v.score > self.threshold]
+            self.__variants = [v for v in Word.__morph.parse(self.text) if v.score > self.threshold]
         return self.__variants
 
     def __repr__(self):
