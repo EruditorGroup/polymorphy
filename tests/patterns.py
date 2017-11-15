@@ -166,6 +166,17 @@ class TestPatternRepeat(TestCase):
         self.assertEqual(matches, [])
 
 
+class TestPatternMaybe(TestCase):
+    def test_match(self):
+        seq     = Seq('большая круглая перламутровая пуговица')
+        pattern = PatternMaybe(ADJF)
+        matches = list(pattern.match_gen(seq))
+        texts   = [match.seq.text for match in matches]
+        self.assertEqual(pattern.min_repeats, 0)
+        self.assertEqual(pattern.max_repeats, 1)
+        self.assertEqual(texts, ['большая', ''])
+
+
 class TestPatternSeq(TestCase):
     def test_match(self):
         pattern = PatternSeq(NOUN, INFN)

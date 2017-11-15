@@ -211,6 +211,13 @@ class PatternRepeat(PatternAbstract):
         return self.__rest
 
 
+class PatternMaybe(PatternRepeat):
+    __slots__ = ('min', 'max', 'min_repeats', 'max_repeats', 'sub', '__rest')
+
+    def __init__(self, pattern):
+        super().__init__(pattern, min = 0, max = 1)
+
+
 class PatternSame(PatternAbstract):
     __slots__ = ('min', 'max', 'sub', 'grms', 'rest')
 
