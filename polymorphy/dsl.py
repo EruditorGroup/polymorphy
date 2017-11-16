@@ -6,10 +6,10 @@ from .patterns import *
 with open(os.path.dirname(__file__) + '/dsl.ebnf', 'r') as file:
     grammar = file.read()
 
-parser = Lark(grammar, start = 'pattern')
+parser = Lark(grammar, start = 'root')
 
 
-class DSLTransformer(Transformer):
+class AbstractPatternTransformer(Transformer):
     def pattern_unit(self, items):
         grammeme = items[0].value
         return PatternUnit(grammeme)
@@ -68,9 +68,34 @@ class DSLTransformer(Transformer):
         return ('r_min', int(items[0].value))
 
 
-transformer = DSLTransformer()
+class FragmentDefinitionTransformer(AbstractPatternTransformer):
+    def fragment_ref(self, items):
+        raise Exception('Fragment reference inside a fragment definition')
+
+    def fragment_def(self, items):
+        name    = items[0].value
+        pattern = items[1]
+        return (name, pattern)
+
+
+class PatternTransformer(AbstractPatternTransformer):
+    def __init__(self, fragments):
+        self._fragments = fragments
+
+    def fragment_ref(self, items):
+        name = items[0].value
+        if not name in self._fragments: raise Exception('Unknown fragment ' + name)
+        return self._fragments[name]
+
+
+fragment_def_transformer = FragmentDefinitionTransformer()
 
 
 def pattern(text):
-    tree    = parser.parse(text)
-    return transformer.transform(tree)
+    tree           = parser.parse(text)
+    pattern_tree   = tree.children[0]
+    fragment_trees = tree.children[1:]
+    fragments      = dict(fragment_def_transformer.transform(t) for t in fragment_trees)
+    transformer    = PatternTransformer(fragments)
+    result         = transformer.transform(pattern_tree)
+    return result

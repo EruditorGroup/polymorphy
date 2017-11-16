@@ -17,78 +17,78 @@ def simplify_tree(tree):
 class TestParser(TestCase):
     def test_pattern_unit(self):
         tree = simplify_tree(parser.parse('POS'))
-        self.assertEqual(tree, {'pattern_unit': ['POS']})
+        self.assertEqual(tree, {'root': [{'pattern_unit': ['POS']}]})
 
         tree = simplify_tree(parser.parse('nomn'))
-        self.assertEqual(tree, {'pattern_unit': ['nomn']})
+        self.assertEqual(tree, {'root': [{'pattern_unit': ['nomn']}]})
 
     def test_pattern_word(self):
         tree = simplify_tree(parser.parse('word("привет")'))
-        self.assertEqual(tree, {'pattern_word': ['"привет"']})
+        self.assertEqual(tree, {'root': [{'pattern_word': ['"привет"']}]})
 
     def test_pattern_lexeme(self):
         tree = simplify_tree(parser.parse('lexeme("привет")'))
-        self.assertEqual(tree, {'pattern_lexeme': ['"привет"']})
+        self.assertEqual(tree, {'root': [{'pattern_lexeme': ['"привет"']}]})
 
     def test_pattern_any(self):
         tree = simplify_tree(parser.parse('any { ADJF gent }'))
-        self.assertEqual(tree, {'pattern_any': [{'nested_patterns': [
+        self.assertEqual(tree, {'root': [{'pattern_any': [{'nested_patterns': [
             {'pattern_unit': ['ADJF']},
             {'pattern_unit': ['gent']},
-        ]}]})
+        ]}]}]})
 
     def test_pattern_all(self):
         tree = simplify_tree(parser.parse('all { ADJF gent }'))
-        self.assertEqual(tree, {'pattern_all': [{'nested_patterns': [
+        self.assertEqual(tree, {'root': [{'pattern_all': [{'nested_patterns': [
             {'pattern_unit': ['ADJF']},
             {'pattern_unit': ['gent']},
-        ]}]})
+        ]}]}]})
 
     def test_pattern_seq(self):
         tree = simplify_tree(parser.parse('seq { NOUN ADJF }'))
-        self.assertEqual(tree, {'pattern_seq': [{'nested_patterns': [
+        self.assertEqual(tree, {'root': [{'pattern_seq': [{'nested_patterns': [
             {'pattern_unit': ['NOUN']},
             {'pattern_unit': ['ADJF']},
-        ]}]})
+        ]}]}]})
 
     def test_pattern_repeat(self):
         tree = simplify_tree(parser.parse('repeat { NOUN }'))
-        self.assertEqual(tree, {'pattern_repeat': [{'nested_pattern': [
+        self.assertEqual(tree, {'root': [{'pattern_repeat': [{'nested_pattern': [
             {'pattern_unit': ['NOUN']},
-        ]}]})
+        ]}]}]})
 
         tree = simplify_tree(parser.parse('repeat(3:) { NOUN }'))
-        self.assertEqual(tree, {'pattern_repeat': [
+        self.assertEqual(tree, {'root': [{'pattern_repeat': [
             {'r_min': ['3']},
             {'nested_pattern': [{'pattern_unit': ['NOUN']}]},
-        ]})
+        ]}]})
 
         tree = simplify_tree(parser.parse('repeat(:4) { NOUN }'))
-        self.assertEqual(tree, {'pattern_repeat': [
+        self.assertEqual(tree, {'root': [{'pattern_repeat': [
             {'r_max': ['4']},
             {'nested_pattern': [
                 {'pattern_unit': ['NOUN']},
             ]}
-        ]})
+        ]}]})
 
         tree = simplify_tree(parser.parse('repeat(3:4) { NOUN }'))
-        self.assertEqual(tree, {'pattern_repeat': [
+        self.assertEqual(tree, {'root': [{'pattern_repeat': [
             {'r_min': ['3']},
             {'r_max': ['4']},
             {'nested_pattern': [
                 {'pattern_unit': ['NOUN']},
             ]}
-        ]})
+        ]}]})
 
     def test_pattern_maybe(self):
         tree = simplify_tree(parser.parse('maybe { NOUN }'))
-        self.assertEqual(tree, {'pattern_maybe': [{'nested_pattern': [
+        self.assertEqual(tree, {'root': [{'pattern_maybe': [{'nested_pattern': [
             {'pattern_unit': ['NOUN']},
-        ]}]})
+        ]}]}]})
 
     def test_pattern_same(self):
         tree = simplify_tree(parser.parse('same(GNdr CAse) { seq { NOUN ADJF } }'))
-        self.assertEqual(tree, {'pattern_same': [
+        self.assertEqual(tree, {'root': [{'pattern_same': [
             'GNdr',
             'CAse',
             {'nested_pattern': [
@@ -97,31 +97,51 @@ class TestParser(TestCase):
                     {'pattern_unit': ['ADJF']},
                 ]}]},
             ]},
-        ]})
+        ]}]})
 
     def test_pattern_named(self):
         tree = simplify_tree(parser.parse('named(foobar) { NOUN }'))
-        self.assertEqual(tree, {'pattern_named': [
+        self.assertEqual(tree, {'root': [{'pattern_named': [
             'foobar',
             {'nested_pattern': [
                 {'pattern_unit': ['NOUN']}
             ]}
+        ]}]})
+
+    def test_fragments(self):
+        tree = simplify_tree(parser.parse('seq { @obj @obj } @obj: seq { ADJF NOUN }'))
+        self.assertEqual(tree, {'root': [
+            {'pattern_seq': [{'nested_patterns': [
+                {'fragment_ref': ['obj']},
+                {'fragment_ref': ['obj']}
+            ]}]},
+            {'fragment_def': [
+                'obj',
+                {'pattern_seq': [{'nested_patterns': [
+                    {'pattern_unit': ['ADJF']},
+                    {'pattern_unit': ['NOUN']},
+                ]}]},
+            ]},
         ]})
 
     def test_whitespaces(self):
-        tree1 = simplify_tree(parser.parse('same(GNdr CAse) { seq { ADJF, NOUN } }'))
+        tree1 = simplify_tree(parser.parse('same(GNdr CAse) { seq { ADJF, NOUN, @foo } }, @foo: repeat { ANY }'))
         tree2 = simplify_tree(parser.parse('''
             same(GNdr, CAse) {
                 seq {
                     ADJF
                     NOUN
+                    @foo
                 }
+            }
+            @foo: repeat {
+                ANY
             }
         '''))
         self.assertEqual(tree1, tree2)
 
 
-class TestInterpreter(TestCase):
+class TestTransformer(TestCase):
     def test_pattern_unit(self):
         p = pattern('nomn')
         self.assertTrue(isinstance(p, PatternUnit))
@@ -203,3 +223,35 @@ class TestInterpreter(TestCase):
         self.assertEqual(p.name, 'foobar')
         self.assertTrue(isinstance(p.sub, PatternUnit))
         self.assertEqual(p.sub.grammeme, 'NOUN')
+
+
+class TestFragments(TestCase):
+    def test_fragment(self):
+        p = pattern('''
+            seq {
+                same(nomn) { @obj }
+                same(gent) { @obj }
+            }
+
+            @obj: same(GNdr) { seq { repeat { ADJF } NOUN } }
+        ''')
+        self.assertTrue(isinstance(p, PatternSeq))
+        self.assertTrue(isinstance(p.parts[0], PatternSame))
+        self.assertTrue(isinstance(p.parts[1], PatternSame))
+        self.assertEqual(p.parts[0].grms, [[nomn]])
+        self.assertEqual(p.parts[1].grms, [[gent]])
+        self.assertTrue(p.parts[0].sub is p.parts[1].sub)
+        self.assertTrue(isinstance(p.parts[0].sub, PatternSame))
+        self.assertEqual(p.parts[0].sub.grms, [ABSTRACT_GRAMMEMES[GNdr]])
+
+    def test_2_fragments(self):
+        p = pattern('''
+            seq { @obj1 @obj2 }
+            @obj1: NOUN
+            @obj2: ADJF
+        ''')
+        self.assertTrue(isinstance(p, PatternSeq))
+        self.assertTrue(isinstance(p.parts[0], PatternUnit))
+        self.assertTrue(isinstance(p.parts[1], PatternUnit))
+        self.assertTrue(p.parts[0].grammeme, NOUN)
+        self.assertTrue(p.parts[1].grammeme, ADJF)

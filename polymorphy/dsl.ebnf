@@ -1,3 +1,5 @@
+root : pattern fragment_def*
+
 ?pattern : pattern_unit
          | pattern_word
          | pattern_lexeme
@@ -8,6 +10,11 @@
          | pattern_maybe
          | pattern_same
          | pattern_named
+         | fragment_ref
+
+fragment_def : "@" CNAME ":" pattern
+
+fragment_ref : "@" CNAME
 
 pattern_unit : grammeme
 
