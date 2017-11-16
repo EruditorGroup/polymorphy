@@ -255,3 +255,18 @@ class TestFragments(TestCase):
         self.assertTrue(isinstance(p.parts[1], PatternUnit))
         self.assertTrue(p.parts[0].grammeme, NOUN)
         self.assertTrue(p.parts[1].grammeme, ADJF)
+
+    def test_fragments_in_fragments(self):
+        p = pattern('''
+            repeat { @obj1 }
+            @obj1: seq { @obj2, @obj3 }
+            @obj2: NOUN
+            @obj3: ADJF
+        ''')
+        self.assertTrue(isinstance(p, PatternRepeat))
+        self.assertTrue(isinstance(p.sub, PatternSeq))
+        self.assertTrue(isinstance(p.sub.parts[0], PatternUnit))
+        self.assertTrue(isinstance(p.sub.parts[0], PatternUnit))
+        self.assertEqual(p.sub.parts[0].grammeme, NOUN)
+        self.assertEqual(p.sub.parts[1].grammeme, ADJF)
+

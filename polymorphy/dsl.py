@@ -9,7 +9,10 @@ with open(os.path.dirname(__file__) + '/dsl.ebnf', 'r') as file:
 parser = Lark(grammar, start = 'root')
 
 
-class AbstractPatternTransformer(Transformer):
+class PatternTransformer(Transformer):
+    def __init__(self, fragments = {}):
+        self._fragments = fragments
+
     def pattern_unit(self, items):
         grammeme = items[0].value
         return PatternUnit(grammeme)
@@ -67,35 +70,31 @@ class AbstractPatternTransformer(Transformer):
     def r_min(self, items):
         return ('r_min', int(items[0].value))
 
-
-class FragmentDefinitionTransformer(AbstractPatternTransformer):
-    def fragment_ref(self, items):
-        raise Exception('Fragment reference inside a fragment definition')
-
-    def fragment_def(self, items):
-        name    = items[0].value
-        pattern = items[1]
-        return (name, pattern)
-
-
-class PatternTransformer(AbstractPatternTransformer):
-    def __init__(self, fragments):
-        self._fragments = fragments
-
     def fragment_ref(self, items):
         name = items[0].value
         if not name in self._fragments: raise Exception('Unknown fragment ' + name)
         return self._fragments[name]
 
 
-fragment_def_transformer = FragmentDefinitionTransformer()
+class FragmentDefinitionTransformer(PatternTransformer):
+    def fragment_def(self, items):
+        name    = items[0].value
+        pattern = items[1]
+        return (name, pattern)
 
 
 def pattern(text):
-    tree           = parser.parse(text)
-    pattern_tree   = tree.children[0]
-    fragment_trees = tree.children[1:]
-    fragments      = dict(fragment_def_transformer.transform(t) for t in fragment_trees)
-    transformer    = PatternTransformer(fragments)
-    result         = transformer.transform(pattern_tree)
+    root_tree      = parser.parse(text)
+    pattern_tree   = root_tree.children[0]
+    fragment_trees = root_tree.children[1:]
+
+    fragments = {}
+    for fragment_tree in reversed(fragment_trees):
+        transformer     = FragmentDefinitionTransformer(fragments)
+        name, pattern   = transformer.transform(fragment_tree)
+        fragments[name] = pattern
+
+    transformer = PatternTransformer(fragments)
+    result      = transformer.transform(pattern_tree)
+
     return result
