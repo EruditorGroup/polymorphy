@@ -100,12 +100,10 @@ class TestParser(TestCase):
         ]}]})
 
     def test_pattern_named(self):
-        tree = simplify_tree(parser.parse('named(foobar) { NOUN }'))
+        tree = simplify_tree(parser.parse('$foobar: NOUN'))
         self.assertEqual(tree, {'root': [{'pattern_named': [
             'foobar',
-            {'nested_pattern': [
-                {'pattern_unit': ['NOUN']}
-            ]}
+            {'pattern_unit': ['NOUN']},
         ]}]})
 
     def test_fragments(self):
@@ -218,7 +216,7 @@ class TestTransformer(TestCase):
         self.assertEqual(p.sub.parts[1].grammeme, 'ADJF')
 
     def test_pattern_named(self):
-        p = pattern('named(foobar) { NOUN }')
+        p = pattern('$foobar: NOUN')
         self.assertTrue(isinstance(p, PatternNamed))
         self.assertEqual(p.name, 'foobar')
         self.assertTrue(isinstance(p.sub, PatternUnit))

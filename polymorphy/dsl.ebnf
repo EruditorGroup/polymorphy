@@ -16,6 +16,8 @@ fragment_def : "@" CNAME ":" pattern
 
 fragment_ref : "@" CNAME
 
+pattern_named : "$" CNAME ":" pattern
+
 pattern_unit : grammeme
 
 pattern_word : "word(" ESCAPED_STRING ")"
@@ -35,8 +37,6 @@ r_max : INT
 pattern_maybe : "maybe" nested_pattern
 
 pattern_same : "same(" grammeme+ ")" nested_pattern
-
-pattern_named : "named(" CNAME ")" nested_pattern
 
 nested_pattern : "{" pattern "}"
 

@@ -54,9 +54,9 @@ class PatternTransformer(Transformer):
         return PatternSame(grms, nested)
 
     def pattern_named(self, items):
-        name   = items[0].value
-        nested = items[-1][1][0]
-        return PatternNamed(name, nested)
+        name    = items[0].value
+        pattern = items[1]
+        return PatternNamed(name, pattern)
 
     def nested_patterns(self, items):
         return ('nested_patterns', items)
