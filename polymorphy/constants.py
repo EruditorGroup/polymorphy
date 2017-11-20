@@ -53,7 +53,7 @@ inan = 'inan' # неодушевлённое
 
 
 ABSTRACT_GRAMMEMES = {
-    POS:  [NOUN, ADJF, INFN, VERB],
+    POS:  [NOUN, ADJF, ADJS, COMP, VERB, INFN, PRTF, PRTS, GRND, NUMR, ADVB, NPRO, PRED, PREP, CONJ, PRCL, INTJ],
     NMbr: [sing, plur],
     GNdr: [masc, femn, neut],
     CAse: [nomn, gent, datv, accs, ablt, loct, voct],
